@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSLANG - 배우기</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --border: #1e1e2e;
+    --accent: #7fff6e;
+    --accent2: #6e8fff;
+    --text: #e0e0f0;
+    --muted: #555570;
+    --error: #ff6e6e;
+    --warn: #ffcc6e;
+    --mono: 'Space Mono', monospace;
+    --display: 'Bebas Neue', cursive;
+    --body: 'DM Sans', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: var(--body); overflow: hidden; }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.3;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* UPLOAD SCREEN */
+  #upload-screen {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--bg);
+  }
+  #upload-screen.hidden { display: none; }
+  .logo { font-family: var(--display); font-size: 96px; line-height: 1; color: var(--accent); letter-spacing: 6px; text-shadow: 0 0 60px rgba(127,255,110,0.25); margin-bottom: 4px; }
+  .logo span { color: var(--accent2); }
+  .tagline { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 56px; }
+  #upload-zone {
+    border: 1px dashed var(--border); padding: 56px 80px; text-align: center; cursor: pointer;
+    transition: all 0.2s; background: var(--surface); position: relative; min-width: 480px;
+  }
+  #upload-zone::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(127,255,110,0.03), transparent 60%); pointer-events: none; }
+  #upload-zone:hover, #upload-zone.drag-over { border-color: var(--accent); box-shadow: 0 0 40px rgba(127,255,110,0.07); }
+  #upload-zone.drag-over { background: rgba(127,255,110,0.04); }
+  .upload-icon { font-size: 40px; margin-bottom: 16px; display: block; }
+  .upload-title { font-family: var(--display); font-size: 28px; letter-spacing: 3px; margin-bottom: 8px; }
+  .upload-sub { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-bottom: 24px; }
+  .upload-sub span { color: var(--accent); }
+  .btn-upload { padding: 10px 28px; background: transparent; border: 1px solid var(--accent); color: var(--accent); font-family: var(--mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+  .btn-upload:hover { background: var(--accent); color: var(--bg); }
+  .or-text { font-family: var(--mono); font-size: 10px; color: var(--muted); margin: 20px 0 12px; letter-spacing: 2px; }
+  .btn-editor-mode { padding: 10px 28px; background: transparent; border: 1px solid var(--accent2); color: var(--accent2); font-family: var(--mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; width: 100%; }
+  .btn-editor-mode:hover { background: var(--accent2); color: var(--bg); }
+  #file-input { display: none; }
+
+  /* APP */
+  #app { position: fixed; inset: 0; z-index: 1; display: none; flex-direction: column; }
+  #app.visible { display: flex; }
+
+  /* Topbar */
+  #topbar { height: 44px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 10px; flex-shrink: 0; z-index: 10; }
+  .tb-logo { font-family: var(--display); font-size: 22px; color: var(--accent); letter-spacing: 3px; margin-right: 4px; }
+  .tb-logo span { color: var(--accent2); }
+  .tb-sep { width: 1px; height: 20px; background: var(--border); }
+  .tb-fname { font-family: var(--mono); font-size: 11px; color: var(--muted); flex: 1; }
+  .tb-fname strong { color: var(--accent2); }
+  .tb-btn { padding: 5px 14px; font-family: var(--mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; border-radius: 1px; transition: all 0.15s; border: 1px solid transparent; }
+  .tb-save { border-color: var(--accent2); color: var(--accent2); background: transparent; }
+  .tb-save:hover { background: var(--accent2); color: var(--bg); }
+  .tb-run { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+  .tb-run:hover { box-shadow: 0 0 16px rgba(127,255,110,0.35); }
+  .tb-run:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+  .tb-clear { border-color: var(--border); color: var(--muted); background: transparent; }
+  .tb-clear:hover { color: var(--text); border-color: var(--muted); }
+  .tb-reset { border-color: transparent; color: var(--muted); background: transparent; font-size: 15px; padding: 4px 8px; }
+  .tb-reset:hover { color: var(--error); }
+  .tb-editor-toggle { border-color: var(--border); color: var(--muted); background: transparent; }
+  .tb-editor-toggle.active { border-color: var(--accent2); color: var(--accent2); background: rgba(110,143,255,0.07); }
+  .tb-editor-toggle:hover { border-color: var(--accent2); color: var(--accent2); }
+  .tb-home { border-color: var(--border); color: var(--muted); background: transparent; display: none; }
+  .tb-home.visible { display: inline-block; }
+  .tb-home:hover { color: var(--text); border-color: var(--muted); }
+
+  /* Main */
+  #main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Source panel */
+  #source-panel { width: 300px; flex-shrink: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface); transition: width 0.25s; overflow: hidden; }
+  #source-panel.hidden { width: 0; border: none; }
+  .panel-header { padding: 7px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); flex-shrink: 0; }
+  .panel-label { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .panel-label.green { color: var(--accent); }
+  .panel-label.blue { color: var(--accent2); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .dot.blue { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+  #code-display { flex: 1; padding: 12px 0; font-family: var(--mono); font-size: 11.5px; line-height: 1.9; overflow-y: auto; counter-reset: line; }
+  #code-display .line { display: block; position: relative; padding-left: 48px; padding-right: 12px; white-space: pre; }
+  #code-display .line::before { content: counter(line); counter-increment: line; position: absolute; left: 0; width: 34px; text-align: right; color: var(--muted); font-size: 10px; opacity: 0.45; user-select: none; }
+
+  /* Output */
+  #output-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  #output-display { flex: 1; padding: 20px; font-family: var(--mono); font-size: 13px; line-height: 1.9; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+  .out-normal { color: var(--text); }
+  .out-error { color: var(--error); }
+  .out-system { color: var(--muted); font-style: italic; }
+  #input-area { display: none; padding: 10px 20px; border-top: 1px solid var(--border); align-items: center; gap: 10px; background: rgba(127,255,110,0.03); flex-shrink: 0; }
+  #input-area.active { display: flex; }
+  .input-prompt { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+  #user-input { flex: 1; background: transparent; border: none; outline: none; font-family: var(--mono); font-size: 13px; color: var(--text); caret-color: var(--accent); }
+  #statusbar { padding: 4px 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; background: rgba(0,0,0,0.2); flex-shrink: 0; }
+  .status-text { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+  .status-text.running { color: var(--accent); }
+  .status-text.error { color: var(--error); }
+
+  /* Editor */
+  #editor-panel { width: 0; flex-shrink: 0; border-left: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface2); overflow: hidden; transition: width 0.25s; }
+  #editor-panel.visible { width: 380px; }
+  #code-editor { flex: 1; background: transparent; border: none; outline: none; padding: 14px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.9; color: var(--text); resize: none; tab-size: 4; caret-color: var(--accent); }
+  #code-editor::placeholder { color: var(--muted); opacity: 0.5; }
+
+  /* Syntax */
+  .kw-os { color: var(--accent2); }
+  .kw-powerful { color: var(--warn); }
+  .kw-broke { color: var(--error); }
+  .kw-print { color: var(--accent); }
+  .kw-string { color: #ffb86c; }
+  .kw-number { color: #bd93f9; }
+  .kw-comment { color: var(--muted); font-style: italic; }
+  .kw-op { color: var(--error); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  .fade-up { animation: fadeUp 0.25s ease forwards; }
+
+</style>
+<style>
+  html, body { height: auto; min-height: 100vh; overflow: auto; }
+  .ls{color:var(--accent2);font-weight:700}.lv{color:var(--accent)}.lc{color:var(--muted);font-style:italic}
+  .lh{font-family:var(--display);font-size:22px;letter-spacing:2px;color:var(--accent);margin:28px 0 8px;display:block;border-bottom:1px solid var(--border);padding-bottom:6px}
+  .lb{background:rgba(255,255,255,0.04);border:1px solid var(--border);padding:12px 16px;margin:8px 0 16px;display:block;white-space:pre;overflow-x:auto;border-radius:2px;font-family:var(--mono);font-size:12px;line-height:1.9}
+  p{margin:6px 0;color:var(--muted);font-size:11px}
+  .learn-wrap { max-width:720px; margin:0 auto; padding:40px 24px 80px; position:relative; z-index:1; }
+  .learn-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+  .learn-logo { font-family:var(--display); font-size:32px; color:var(--accent); letter-spacing:4px; }
+  .learn-logo span { color:var(--accent2); }
+  .back-btn { font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; text-decoration:none; border:1px solid var(--border); padding:5px 12px; transition:all 0.15s; }
+  .back-btn:hover { color:var(--text); border-color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="learn-wrap">
+  <div class="learn-topbar">
+    <div class="learn-logo">OS<span>LANG</span></div>
+    <a href="index.html" class="back-btn">← 메인으로</a>
+  </div>
+  <div style="font-family:var(--mono);font-size:12px;line-height:2;color:var(--text);">
+<style>
+.ls{color:var(--accent2);font-weight:700}.lv{color:var(--accent)}.lc{color:var(--muted);font-style:italic}
+.lh{font-family:var(--display);font-size:22px;letter-spacing:2px;color:var(--accent);margin:28px 0 8px;display:block;border-bottom:1px solid var(--border);padding-bottom:6px}
+.lb{background:rgba(255,255,255,0.04);border:1px solid var(--border);padding:12px 16px;margin:8px 0 16px;display:block;white-space:pre;overflow-x:auto;border-radius:2px;font-family:var(--mono);font-size:12px;line-height:1.9}
+p{margin:6px 0;color:var(--muted);font-size:11px}
+</style>
+
+<span class="lh">1. 출력</span>
+<code class="lb"><span class="ls">print</span>(((내용)))          <span class="lc">// 줄바꿈 없음</span>
+<span class="ls">printn</span>(((내용)))         <span class="lc">// 줄바꿈</span>
+<span class="ls">print</span>(((내용)))n         <span class="lc">// 줄바꿈</span>
+<span class="ls">printn</span>(value)           <span class="lc">// 변수 출력</span>
+<span class="ls">print</span>(on"value")        <span class="lc">// 변수 출력 (on"변수명")</span>
+<span class="ls">print</span>((( )))            <span class="lc">// 공백 → (_) 사용</span>
+<span class="ls">print</span>(((hello(_)world)))<span class="lc">// hello world</span></code>
+
+<span class="lh">2. 변수</span>
+<code class="lb"><span class="ls">OS int</span> value=3:
+    <span class="ls">printn</span>(value)          <span class="lc">// 블록 안에서만 유효</span></code>
+
+<span class="lh">3. 입력</span>
+<code class="lb"><span class="ls">OS scan int</span> value:
+    <span class="ls">printn</span>(value)
+    scan b              <span class="lc">// 블록 중간 입력</span>
+    <span class="ls">printn</span>(value+b)</code>
+
+<span class="lh">4. 조건문</span>
+<code class="lb"><span class="ls">OS scan int</span> n:
+    <span class="ls">OS if</span> n==5:
+        <span class="ls">printn</span>(((5입니다)))
+    <span class="ls">OS if first if</span>!=True:  <span class="lc">// else</span>
+        <span class="ls">printn</span>(((5가 아닙니다)))</code>
+
+<span class="lh">5. 반복문</span>
+<code class="lb">-<span class="ls">printn</span>(((안녕)))
+3return start at -       <span class="lc">// 3번 반복</span>
+
+<span class="lc">// 조건이 참이 될 때까지 반복</span>
+-<span class="ls">printn</span>(((반복중)))
+<span class="ls">OS if</span> value==10 return start at -
+
+<span class="lc">// 무한 반복 (정지 버튼으로 멈춤)</span>
+-<span class="ls">printn</span>(((무한)))
+<span class="ls">OS if</span> 0=True return start at -</code>
+
+<span class="lh">6. 리스트 / 데이터 / 딕셔너리</span>
+<code class="lb"><span class="ls">OS list</span> lst=[3,2,1]:
+    <span class="ls">printn</span>(lst[2])         <span class="lc">// 2 (1부터 시작)</span>
+
+<span class="ls">OS scan list</span>(3):        <span class="lc">// 3개 입력 (띄어쓰기/엔터 구분)</span>
+    <span class="ls">printn</span>(list[1])
+
+<span class="ls">OS scan list</span>(all):      <span class="lc">// 엔터 전까지 전부</span>
+    <span class="ls">printn</span>(list[1])
+
+<span class="ls">OS data</span> d="안녕""세계":
+    <span class="ls">printn</span>(d1)             <span class="lc">// 안녕</span>
+    <span class="ls">printn</span>(d2)             <span class="lc">// 세계</span>
+
+<span class="ls">OS dic</span> d={1:100,2:200}:
+    <span class="ls">print</span>(d key name 1)    <span class="lc">// 100</span></code>
+
+<span class="lh">7. print 스타일 변경</span>
+<code class="lb"><span class="ls">OS change print</span>:
+    <span class="ls">print</span>(12pt,나눔고딕,<span class="lv">#ff0000</span>)
+<span class="ls">printn</span>(((빨간 나눔고딕 글씨)))
+<span class="lc">// 색상: red,blue,#ff0000 등 / 크기: 12pt</span>
+<span class="lc">// 폰트: 나눔고딕, 맑은고딕, 산돌고딕Neo 등</span></code>
+
+<span class="lh">8. 기타</span>
+<code class="lb"><span class="lc">OS nocode: 이건 주석입니다</span>
+<span class="ls">OS finish code</span>:         <span class="lc">// 프로그램 종료</span>
+<span class="ls">broke OS</span>:start no print  <span class="lc">// print 무시 시작</span>
+<span class="ls">broke OS</span>:finish no print <span class="lc">// print 무시 끝</span></code>
+
+<span class="lh">9. powerful OS</span>
+<code class="lb"><span class="ls">powerful OS</span>: open link example.com   <span class="lc">// 링크 열기</span></code>
+
+<span class="lh">10. 이미지 만들기</span>
+<p>픽셀 방식</p>
+<code class="lb"><span class="ls">OS</span> 32*32,img.png:
+    all <span class="lv">#ffffff</span>            <span class="lc">// 전체 채우기</span>
+    pixel 1,1 <span class="lv">#ff0000</span>     <span class="lc">// 특정 픽셀</span>
+    rect 2,2,10,10 <span class="lv">#0000ff</span><span class="lc">// 사각형</span>
+<span class="ls">printn</span>(img.png)</code>
+<p>HTML 방식</p>
+<code class="lb"><span class="ls">img name</span>=cat.png:
+    img-html(&lt;div style="font-size:80px"&gt;🐱&lt;/div&gt;)
+<span class="ls">printn</span>(cat.png)</code>
+
+<span class="lh">11. 파일 업로드 & 출력</span>
+<p>편집자 모드 상단 ↑ 파일 업로드 버튼으로 파일 추가, ✕ 로 삭제</p>
+<code class="lb"><span class="ls">print</span>(photo.png)         <span class="lc">// 이미지 출력</span>
+<span class="ls">print</span>(song.mp3)          <span class="lc">// 오디오 플레이어</span>
+<span class="ls">print</span>(video.mp4)         <span class="lc">// 비디오 플레이어</span>
+<span class="ls">print</span>(script.js)         <span class="lc">// 코드 텍스트</span>
+<span class="ls">print</span>(page.html)         <span class="lc">// HTML 렌더링</span></code>
+<p>파일이 포함된 .osios 저장 시 파일도 함께 묶어서 저장됨</p>
+
+<span class="lh">12. 텍스트 이동</span>
+<p>OS print로 텍스트를 출력하고 move로 이동</p>
+<code class="lb"><span class="ls">OS print</span>((안녕하세요)):
+    <span class="ls">move</span>(x,10)
+    <span class="ls">move</span>(y,5)</code>
+
+<span class="lh">13. 이미지 크기 / 회전 / 충돌</span>
+<p>다음에 출력될 이미지 크기 설정</p>
+<code class="lb"><span class="ls">img</span> 100px*100px;      <span class="lc">// 다음 print 이미지를 100x100으로</span>
+<span class="ls">print</span>(photo.png)      <span class="lc">// 이 이미지에 적용됨 (한번만)</span></code>
+<p>이미지 회전</p>
+<code class="lb">#photo.png
+<span class="ls">move</span>(spin,45)         <span class="lc">// 45도 회전</span>
+-<span class="ls">move</span>(spin,3)
+<span class="ls">OS if</span> 0=True return start at -  <span class="lc">// 계속 회전</span></code>
+<p>두 이미지 충돌 감지</p>
+<code class="lb"><span class="ls">OS if</span> player.png touch enemy.JPG:
+    <span class="ls">printn</span>(((충돌!)))
+<span class="lc">// 반복문에서 활용</span>
+-<span class="ls">move</span>(x,3)
+<span class="ls">OS if</span> player.png touch wall.png return start at -</code>
+<p>#이미지명으로 선택 후 move로 이동, 조건 반복으로 애니메이션 가능</p>
+<code class="lb"><span class="ls">print</span>(photo.png)         <span class="lc">// 먼저 출력</span>
+#photo.png               <span class="lc">// 이미지 선택</span>
+-<span class="ls">move</span>(y,5)              <span class="lc">// y축 5씩 이동</span>
+<span class="ls">OS if</span> photo.png(y)==500 return start at -
+<span class="lc">// 무한 이동</span>
+-<span class="ls">move</span>(y,5)
+<span class="ls">OS if</span> 0=True return start at -
+<span class="lc">// photo.png(x), photo.png(y) 로 좌표 참조</span></code>
+
+<span class="lh">14. 키 감지</span>
+<p>OS if lock==키: 로 키 입력 감지</p>
+<code class="lb"><span class="lc">// 일반 키</span>
+<span class="ls">OS if</span> lock==q:           <span class="lc">// q키</span>
+<span class="ls">OS if</span> lock==space:       <span class="lc">// 스페이스</span>
+<span class="ls">OS if</span> lock==backspace:   <span class="lc">// 백스페이스</span>
+<span class="ls">OS if</span> lock==Enter:       <span class="lc">// 엔터</span>
+<span class="ls">OS if</span> lock==Del:         <span class="lc">// Delete</span>
+<span class="ls">OS if</span> lock==Insert:      <span class="lc">// Insert</span>
+<span class="ls">OS if</span> lock==Numlock:     <span class="lc">// NumLock</span>
+
+<span class="lc">// 방향키</span>
+<span class="ls">OS if</span> lock==left:        <span class="lc">// ←</span>
+<span class="ls">OS if</span> lock==right:       <span class="lc">// →</span>
+<span class="ls">OS if</span> lock==up:          <span class="lc">// ↑</span>
+<span class="ls">OS if</span> lock==down:        <span class="lc">// ↓</span>
+
+<span class="lc">// 마우스 클릭</span>
+<span class="ls">OS if</span> lock==leftclick:   <span class="lc">// 마우스 왼쪽</span>
+<span class="ls">OS if</span> lock==rightclick:  <span class="lc">// 마우스 오른쪽</span>
+
+<span class="lc">// 반복문 안에서 키 감지 예제</span>
+-<span class="ls">move</span>(x,5)
+<span class="ls">OS if</span> lock==space return start at -  <span class="lc">// 스페이스 누를때까지</span></code>
+
+<span class="lh">15. 함수</span>
+<code class="lb"><span class="lc">// 함수 정의</span>
+<span class="ls">OS fun</span> sum(a,b){
+return a+b
+}
+<span class="lc">// 함수 호출</span>
+<span class="ls">printn</span>(sum(3,2))       <span class="lc">// 5</span>
+<span class="ls">print</span>(sum(10,20))</code>
+
+<span class="lh">16. import / play</span>
+<p>편집자 모드에서 .osios 파일 업로드 후:</p>
+<code class="lb"><span class="lc">// 함수 불러오기</span>
+<span class="ls">import</span> example.osios
+<span class="ls">printn</span>(sum(1,2))
+
+<span class="lc">// osios 파일 실행 (현재 출력 아래에서)</span>
+<span class="ls">play</span>(example.osios)</code>
+
+<span class="lh">17. OS clr</span>
+<code class="lb"><span class="ls">OS clr</span>               <span class="lc">// 출력 전체 지우기</span></code>
+
+<span class="lh">18. console</span>
+<p>괄호 안의 JS 코드를 브라우저에서 그대로 실행</p>
+<code class="lb"><span class="ls">console</span>(alert("hello"))
+<span class="ls">console</span>(console.log("hi"))
+<span class="ls">console</span>(document.title = "OSLANG")</code>
+  </div>
+</div>
+</body>
+</html>

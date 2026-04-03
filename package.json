@@ -1,0 +1,29 @@
+{
+  "name": "oslang-interpreter",
+  "version": "4.5.0",
+  "description": "OSLANG Interpreter Desktop App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.oslang.interpreter",
+    "productName": "OSLANG Interpreter",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "src/**/*"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "src/favicon.svg"
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0"
+  }
+}

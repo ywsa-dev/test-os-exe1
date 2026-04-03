@@ -1,0 +1,7 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>
+  <rect width='32' height='32' rx='8' fill='#0a0a0f'/>
+  <rect x='1' y='1' width='30' height='30' rx='7' fill='none' stroke='#1e1e2e' stroke-width='1'/>
+  <text x='16' y='14' font-family='Arial Black,sans-serif' font-size='11' font-weight='900' fill='#7fff6e' text-anchor='middle' letter-spacing='1'>OS</text>
+  <line x1='6' y1='17' x2='26' y2='17' stroke='#1e1e2e' stroke-width='0.8'/>
+  <text x='16' y='26' font-family='Arial Black,sans-serif' font-size='8' font-weight='900' fill='#6e8fff' text-anchor='middle' letter-spacing='2'>LANG</text>
+</svg>

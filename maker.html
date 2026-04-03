@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSLANG Maker</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --border: #1e1e2e;
+    --accent: #7fff6e;
+    --accent2: #6e8fff;
+    --text: #e0e0f0;
+    --muted: #555570;
+    --error: #ff6e6e;
+    --warn: #ffcc6e;
+    --mono: 'Space Mono', monospace;
+    --display: 'Bebas Neue', cursive;
+    --body: 'DM Sans', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: var(--body); overflow: hidden; }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.3;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* UPLOAD SCREEN */
+  #upload-screen {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--bg);
+  }
+  #upload-screen.hidden { display: none; }
+  .logo { font-family: var(--display); font-size: 96px; line-height: 1; color: var(--accent); letter-spacing: 6px; text-shadow: 0 0 60px rgba(127,255,110,0.25); margin-bottom: 4px; }
+  .logo span { color: var(--accent2); }
+  .tagline { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 56px; }
+  #upload-zone {
+    border: 1px dashed var(--border); padding: 56px 80px; text-align: center; cursor: pointer;
+    transition: all 0.2s; background: var(--surface); position: relative; min-width: 480px;
+  }
+  #upload-zone::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(127,255,110,0.03), transparent 60%); pointer-events: none; }
+  #upload-zone:hover, #upload-zone.drag-over { border-color: var(--accent); box-shadow: 0 0 40px rgba(127,255,110,0.07); }
+  #upload-zone.drag-over { background: rgba(127,255,110,0.04); }
+  .upload-icon { font-size: 40px; margin-bottom: 16px; display: block; }
+  .upload-title { font-family: var(--display); font-size: 28px; letter-spacing: 3px; margin-bottom: 8px; }
+  .upload-sub { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-bottom: 24px; }
+  .upload-sub span { color: var(--accent); }
+  .btn-upload { padding: 10px 28px; background: transparent; border: 1px solid var(--accent); color: var(--accent); font-family: var(--mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+  .btn-upload:hover { background: var(--accent); color: var(--bg); }
+  .or-text { font-family: var(--mono); font-size: 10px; color: var(--muted); margin: 20px 0 12px; letter-spacing: 2px; }
+  .btn-editor-mode { padding: 10px 28px; background: transparent; border: 1px solid var(--accent2); color: var(--accent2); font-family: var(--mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; width: 100%; }
+  .btn-editor-mode:hover { background: var(--accent2); color: var(--bg); }
+  #file-input { display: none; }
+
+  /* APP */
+  #app { position: fixed; inset: 0; z-index: 1; display: none; flex-direction: column; }
+  #app.visible { display: flex; }
+
+  /* Topbar */
+  #topbar { height: 44px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 10px; flex-shrink: 0; z-index: 10; }
+  .tb-logo { font-family: var(--display); font-size: 22px; color: var(--accent); letter-spacing: 3px; margin-right: 4px; }
+  .tb-logo span { color: var(--accent2); }
+  .tb-sep { width: 1px; height: 20px; background: var(--border); }
+  .tb-fname { font-family: var(--mono); font-size: 11px; color: var(--muted); flex: 1; }
+  .tb-fname strong { color: var(--accent2); }
+  .tb-btn { padding: 5px 14px; font-family: var(--mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; border-radius: 1px; transition: all 0.15s; border: 1px solid transparent; }
+  .tb-save { border-color: var(--accent2); color: var(--accent2); background: transparent; }
+  .tb-save:hover { background: var(--accent2); color: var(--bg); }
+  .tb-run { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+  .tb-run:hover { box-shadow: 0 0 16px rgba(127,255,110,0.35); }
+  .tb-run:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+  .tb-clear { border-color: var(--border); color: var(--muted); background: transparent; }
+  .tb-clear:hover { color: var(--text); border-color: var(--muted); }
+  .tb-reset { border-color: transparent; color: var(--muted); background: transparent; font-size: 15px; padding: 4px 8px; }
+  .tb-reset:hover { color: var(--error); }
+  .tb-editor-toggle { border-color: var(--border); color: var(--muted); background: transparent; }
+  .tb-editor-toggle.active { border-color: var(--accent2); color: var(--accent2); background: rgba(110,143,255,0.07); }
+  .tb-editor-toggle:hover { border-color: var(--accent2); color: var(--accent2); }
+  .tb-home { border-color: var(--border); color: var(--muted); background: transparent; display: none; }
+  .tb-home.visible { display: inline-block; }
+  .tb-home:hover { color: var(--text); border-color: var(--muted); }
+
+  /* Main */
+  #main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Source panel */
+  #source-panel { width: 300px; flex-shrink: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface); transition: width 0.25s; overflow: hidden; }
+  #source-panel.hidden { width: 0; border: none; }
+  .panel-header { padding: 7px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); flex-shrink: 0; }
+  .panel-label { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .panel-label.green { color: var(--accent); }
+  .panel-label.blue { color: var(--accent2); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .dot.blue { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+  #code-display { flex: 1; padding: 12px 0; font-family: var(--mono); font-size: 11.5px; line-height: 1.9; overflow-y: auto; counter-reset: line; }
+  #code-display .line { display: block; position: relative; padding-left: 48px; padding-right: 12px; white-space: pre; }
+  #code-display .line::before { content: counter(line); counter-increment: line; position: absolute; left: 0; width: 34px; text-align: right; color: var(--muted); font-size: 10px; opacity: 0.45; user-select: none; }
+
+  /* Output */
+  #output-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  #output-display { flex: 1; padding: 20px; font-family: var(--mono); font-size: 13px; line-height: 1.9; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+  .out-normal { color: var(--text); }
+  .out-error { color: var(--error); }
+  .out-system { color: var(--muted); font-style: italic; }
+  #input-area { display: none; padding: 10px 20px; border-top: 1px solid var(--border); align-items: center; gap: 10px; background: rgba(127,255,110,0.03); flex-shrink: 0; }
+  #input-area.active { display: flex; }
+  .input-prompt { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+  #user-input { flex: 1; background: transparent; border: none; outline: none; font-family: var(--mono); font-size: 13px; color: var(--text); caret-color: var(--accent); }
+  #statusbar { padding: 4px 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; background: rgba(0,0,0,0.2); flex-shrink: 0; }
+  .status-text { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+  .status-text.running { color: var(--accent); }
+  .status-text.error { color: var(--error); }
+
+  /* Editor */
+  #editor-panel { width: 0; flex-shrink: 0; border-left: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface2); overflow: hidden; transition: width 0.25s; }
+  #editor-panel.visible { width: 380px; }
+  #code-editor { flex: 1; background: transparent; border: none; outline: none; padding: 14px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.9; color: var(--text); resize: none; tab-size: 4; caret-color: var(--accent); }
+  #code-editor::placeholder { color: var(--muted); opacity: 0.5; }
+
+  /* Syntax */
+  .kw-os { color: var(--accent2); }
+  .kw-powerful { color: var(--warn); }
+  .kw-broke { color: var(--error); }
+  .kw-print { color: var(--accent); }
+  .kw-string { color: #ffb86c; }
+  .kw-number { color: #bd93f9; }
+  .kw-comment { color: var(--muted); font-style: italic; }
+  .kw-op { color: var(--error); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  .fade-up { animation: fadeUp 0.25s ease forwards; }
+
+</style>
+</head>
+<body>
+<!-- APP -->
+<div id="app">
+  <div id="topbar">
+    <div class="tb-logo">OS<span>LANG</span></div>
+    <div class="tb-sep"></div>
+    <button class="tb-btn tb-save" onclick="saveFile()">↓ 저장</button>
+    <span class="tb-fname" id="fname-display"></span>
+    <button class="tb-btn tb-home" id="home-btn" onclick="resetAll()">← 메인으로</button>
+    <button class="tb-btn tb-editor-toggle" id="editor-toggle-btn" onclick="toggleEditor()">✎ 편집자 모드</button>
+    <button class="tb-btn tb-clear" onclick="clearOutput()">출력 지우기</button>
+    <button class="tb-btn tb-run" id="btn-run" onclick="runCode()">▶ 실행</button>
+    <button class="tb-btn" id="btn-stop" onclick="stopCode()" style="border-color:#ff6e6e;color:#ff6e6e;background:transparent;display:none;">■ 정지</button>
+    <button class="tb-btn tb-reset" title="처음으로" onclick="resetAll()">⏎</button>
+  </div>
+  <div id="main">
+    <div id="source-panel">
+      <div class="panel-header">
+        <span class="panel-label blue">◈ source</span>
+        <span class="panel-label" id="line-count-label"></span>
+      </div>
+      <div id="code-display"></div>
+    </div>
+    <div id="output-panel">
+      <div class="panel-header">
+        <span class="panel-label green">▸ output</span>
+        <div class="dot"></div>
+      </div>
+      <div id="output-display" tabindex="0"><span class="out-system">// 실행 대기 중...</span></div>
+      <div id="input-area">
+        <span class="input-prompt">›</span>
+        <input type="text" id="user-input" placeholder="입력 후 Enter" autocomplete="off">
+      </div>
+      <div id="statusbar">
+        <span class="status-text" id="status-text">READY</span>
+        <span class="status-text" id="status-right"></span>
+      </div>
+    </div>
+    <div id="editor-panel">
+      <div class="panel-header">
+        <span class="panel-label blue">✎ editor</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="tb-btn tb-save" style="padding:3px 10px;font-size:9px;" onclick="document.getElementById('asset-input').click()">↑ 파일 업로드</button>
+          <input type="file" id="asset-input" multiple style="display:none">
+          <span class="panel-label" style="font-size:9px; opacity:0.6;">TAB = 4칸</span>
+        </div>
+      </div>
+      <div id="asset-list" style="display:none;padding:6px 12px;border-bottom:1px solid var(--border);max-height:80px;overflow-y:auto;"></div>
+      <textarea id="code-editor" spellcheck="false" placeholder="// OSLANG 코드를 여기에 작성하세요...&#10;&#10;OS scan int value:&#10;    printn(value)"></textarea>
+    </div>
+  </div>
+</div>
+<!-- LEARN MODAL -->
+<div id="learn-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.85);overflow-y:auto;">
+  <div style="max-width:720px;margin:40px auto;background:var(--surface);border:1px solid var(--border);padding:0 0 40px 0;position:relative;">
+    <div style="padding:20px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1;">
+      <span style="font-family:var(--display);font-size:28px;color:var(--accent);letter-spacing:3px;">OSLANG <span style="color:var(--accent2)">배우기</span></span>
+      <button onclick="closeLearn()" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:11px;padding:6px 14px;cursor:pointer;letter-spacing:1px;" onmouseover="this.style.color='var(--error)';this.style.borderColor='var(--error)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">✕ 닫기</button>
+    </div>
+    <div style="padding:28px;font-family:var(--mono);font-size:12px;line-height:2;color:var(--text);" id="learn-content"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div id="topbar">
+    <div class="tb-logo">OS<span>LANG</span></div>
+    <div class="tb-sep"></div>
+    <button class="tb-btn tb-save" onclick="saveFile()">↓ 저장</button>
+    <span class="tb-fname" id="fname-display"></span>
+    <button class="tb-btn tb-home" id="home-btn" onclick="resetAll()">← 메인으로</button>
+    <button class="tb-btn tb-editor-toggle" id="editor-toggle-btn" onclick="toggleEditor()">✎ 편집자 모드</button>
+    <button class="tb-btn tb-clear" onclick="clearOutput()">출력 지우기</button>
+    <button class="tb-btn tb-run" id="btn-run" onclick="runCode()">▶ 실행</button>
+    <button class="tb-btn" id="btn-stop" onclick="stopCode()" style="border-color:#ff6e6e;color:#ff6e6e;background:transparent;display:none;">■ 정지</button>
+    <button class="tb-btn tb-reset" title="처음으로" onclick="resetAll()">⏎</button>
+  </div>
+  <div id="main">
+    <div id="source-panel">
+      <div class="panel-header">
+        <span class="panel-label blue">◈ source</span>
+        <span class="panel-label" id="line-count-label"></span>
+      </div>
+      <div id="code-display"></div>
+    </div>
+    <div id="output-panel">
+      <div class="panel-header">
+        <span class="panel-label green">▸ output</span>
+        <div class="dot"></div>
+      </div>
+      <div id="output-display" tabindex="0"><span class="out-system">// 실행 대기 중...</span></div>
+      <div id="input-area">
+        <span class="input-prompt">›</span>
+        <input type="text" id="user-input" placeholder="입력 후 Enter" autocomplete="off">
+      </div>
+      <div id="statusbar">
+        <span class="status-text" id="status-text">READY</span>
+        <span class="status-text" id="status-right"></span>
+      </div>
+    </div>
+    <div id="editor-panel">
+      <div class="panel-header">
+        <span class="panel-label blue">✎ editor</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="tb-btn tb-save" style="padding:3px 10px;font-size:9px;" onclick="document.getElementById('asset-input').click()">↑ 파일 업로드</button>
+          <input type="file" id="asset-input" multiple style="display:none">
+          <span class="panel-label" style="font-size:9px; opacity:0.6;">TAB = 4칸</span>
+        </div>
+      </div>
+      <div id="asset-list" style="display:none;padding:6px 12px;border-bottom:1px solid var(--border);max-height:80px;overflow-y:auto;"></div>
+      <textarea id="code-editor" spellcheck="false" placeholder="// OSLANG 코드를 여기에 작성하세요...&#10;&#10;OS scan int value:&#10;    printn(value)"></textarea>
+    </div>
+  </div>
+</div>
+<script>
+const LEARN_HTML = `<style>
+.ls{color:var(--accent2);font-weight:700}.lv{color:var(--accent)}.lc{color:var(--muted);font-style:italic}
+.lh{font-family:var(--display);font-size:22px;letter-spacing:2px;color:var(--accent);margin:28px 0 8px;display:block;border-bottom:1px solid var(--border);padding-bottom:6px}
+.lb{background:rgba(255,255,255,0.04);border:1px solid var(--border);padding:12px 16px;margin:8px 0 16px;display:block;white-space:pre;overflow-x:auto;border-radius:2px;font-family:var(--mono);font-size:12px;line-height:1.9}
+p{margin:6px 0;color:var(--muted);font-size:11px}
+</style>
+
+<span class="lh">1. 출력</span>
+<code class="lb"><span class="ls">print</span>(((내용)))          <span class="lc">// 줄바꿈 없음</span>
+<span class="ls">printn</span>(((내용)))         <span class="lc">// 줄바꿈</span>
+<span class="ls">print</span>(((내용)))n         <span class="lc">// 줄바꿈</span>
+<span class="ls">printn</span>(value)           <span class="lc">// 변수 출력</span>
+<span class="ls">print</span>(on"value")        <span class="lc">// 변수 출력 (on"변수명")</span>
+<span class="ls">print</span>((( )))            <span class="lc">// 공백 → (_) 사용</span>
+<span class="ls">print</span>(((hello(_)world)))<span class="lc">// hello world</span></code>
+
+<span class="lh">2. 변수</span>
+<code class="lb"><span class="ls">OS int</span> value=3:
+    <span class="ls">printn</span>(value)          <span class="lc">// 블록 안에서만 유효</span></code>
+
+<span class="lh">3. 입력</span>
+<code class="lb"><span class="ls">OS scan int</span> value:
+    <span class="ls">printn</span>(value)
+    scan b              <span class="lc">// 블록 중간 입력</span>
+    <span class="ls">printn</span>(value+b)</code>
+
+<span class="lh">4. 조건문</span>
+<code class="lb"><span class="ls">OS scan int</span> n:
+    <span class="ls">OS if</span> n==5:
+        <span class="ls">printn</span>(((5입니다)))
+    <span class="ls">OS if first if</span>!=True:  <span class="lc">// else</span>
+        <span class="ls">printn</span>(((5가 아닙니다)))</code>
+
+<span class="lh">5. 반복문</span>
+<code class="lb">-<span class="ls">printn</span>(((안녕)))
+3return start at -       <span class="lc">// 3번 반복</span>
+
+<span class="lc">// 조건이 참이 될 때까지 반복</span>
+-<span class="ls">printn</span>(((반복중)))
+<span class="ls">OS if</span> value==10 return start at -
+
+<span class="lc">// 무한 반복 (정지 버튼으로 멈춤)</span>
+-<span class="ls">printn</span>(((무한)))
+<span class="ls">OS if</span> 0=True return start at -</code>
+
+<span class="lh">6. 리스트 / 데이터 / 딕셔너리</span>
+<code class="lb"><span class="ls">OS list</span> lst=[3,2,1]:
+    <span class="ls">printn</span>(lst[2])         <span class="lc">// 2 (1부터 시작)</span>
+
+<span class="ls">OS scan list</span>(3):        <span class="lc">// 3개 입력 (띄어쓰기/엔터 구분)</span>
+    <span class="ls">printn</span>(list[1])
+
+<span class="ls">OS scan list</span>(all):      <span class="lc">// 엔터 전까지 전부</span>
+    <span class="ls">printn</span>(list[1])
+
+<span class="ls">OS data</span> d="안녕""세계":
+    <span class="ls">printn</span>(d1)             <span class="lc">// 안녕</span>
+    <span class="ls">printn</span>(d2)             <span class="lc">// 세계</span>
+
+<span class="ls">OS dic</span> d={1:100,2:200}:
+    <span class="ls">print</span>(d key name 1)    <span class="lc">// 100</span></code>
+
+<span class="lh">7. print 스타일 변경</span>
+<code class="lb"><span class="ls">OS change print</span>:
+    <span class="ls">print</span>(12pt,나눔고딕,<span class="lv">#ff0000</span>)
+<span class="ls">printn</span>(((빨간 나눔고딕 글씨)))
+<span class="lc">// 색상: red,blue,#ff0000 등 / 크기: 12pt</span>
+<span class="lc">// 폰트: 나눔고딕, 맑은고딕, 산돌고딕Neo 등</span></code>
+
+<span class="lh">8. 기타</span>
+<code class="lb"><span class="lc">OS nocode: 이건 주석입니다</span>
+<span class="ls">OS finish code</span>:         <span class="lc">// 프로그램 종료</span>
+<span class="ls">broke OS</span>:start no print  <span class="lc">// print 무시 시작</span>
+<span class="ls">broke OS</span>:finish no print <span class="lc">// print 무시 끝</span></code>
+
+<span class="lh">9. powerful OS</span>
+<code class="lb"><span class="ls">powerful OS</span>: open link example.com   <span class="lc">// 링크 열기</span></code>
+
+<span class="lh">10. 이미지 만들기</span>
+<p>픽셀 방식</p>
+<code class="lb"><span class="ls">OS</span> 32*32,img.png:
+    all <span class="lv">#ffffff</span>            <span class="lc">// 전체 채우기</span>
+    pixel 1,1 <span class="lv">#ff0000</span>     <span class="lc">// 특정 픽셀</span>
+    rect 2,2,10,10 <span class="lv">#0000ff</span><span class="lc">// 사각형</span>
+<span class="ls">printn</span>(img.png)</code>
+<p>HTML 방식</p>
+<code class="lb"><span class="ls">img name</span>=cat.png:
+    img-html(&lt;div style="font-size:80px"&gt;🐱&lt;/div&gt;)
+<span class="ls">printn</span>(cat.png)</code>
+
+<span class="lh">11. 파일 업로드 & 출력</span>
+<p>편집자 모드 상단 ↑ 파일 업로드 버튼으로 파일 추가, ✕ 로 삭제</p>
+<code class="lb"><span class="ls">print</span>(photo.png)         <span class="lc">// 이미지 출력</span>
+<span class="ls">print</span>(song.mp3)          <span class="lc">// 오디오 플레이어</span>
+<span class="ls">print</span>(video.mp4)         <span class="lc">// 비디오 플레이어</span>
+<span class="ls">print</span>(script.js)         <span class="lc">// 코드 텍스트</span>
+<span class="ls">print</span>(page.html)         <span class="lc">// HTML 렌더링</span></code>
+<p>파일이 포함된 .osios 저장 시 파일도 함께 묶어서 저장됨</p>
+
+<span class="lh">12. 텍스트 이동</span>
+<p>OS print로 텍스트를 출력하고 move로 이동</p>
+<code class="lb"><span class="ls">OS print</span>((안녕하세요)):
+    <span class="ls">move</span>(x,10)
+    <span class="ls">move</span>(y,5)</code>
+
+<span class="lh">13. 이미지 크기 / 회전 / 충돌</span>
+<p>다음에 출력될 이미지 크기 설정</p>
+<code class="lb"><span class="ls">img</span> 100px*100px;      <span class="lc">// 다음 print 이미지를 100x100으로</span>
+<span class="ls">print</span>(photo.png)      <span class="lc">// 이 이미지에 적용됨 (한번만)</span></code>
+<p>이미지 회전</p>
+<code class="lb">#photo.png
+<span class="ls">move</span>(spin,45)         <span class="lc">// 45도 회전</span>
+-<span class="ls">move</span>(spin,3)
+<span class="ls">OS if</span> 0=True return start at -  <span class="lc">// 계속 회전</span></code>
+<p>두 이미지 충돌 감지</p>
+<code class="lb"><span class="ls">OS if</span> player.png touch enemy.JPG:
+    <span class="ls">printn</span>(((충돌!)))
+<span class="lc">// 반복문에서 활용</span>
+-<span class="ls">move</span>(x,3)
+<span class="ls">OS if</span> player.png touch wall.png return start at -</code>
+<p>#이미지명으로 선택 후 move로 이동, 조건 반복으로 애니메이션 가능</p>
+<code class="lb"><span class="ls">print</span>(photo.png)         <span class="lc">// 먼저 출력</span>
+#photo.png               <span class="lc">// 이미지 선택</span>
+-<span class="ls">move</span>(y,5)              <span class="lc">// y축 5씩 이동</span>
+<span class="ls">OS if</span> photo.png(y)==500 return start at -
+<span class="lc">// 무한 이동</span>
+-<span class="ls">move</span>(y,5)
+<span class="ls">OS if</span> 0=True return start at -
+<span class="lc">// photo.png(x), photo.png(y) 로 좌표 참조</span></code>
+
+<span class="lh">14. 키 감지</span>
+<p>OS if lock==키: 로 키 입력 감지</p>
+<code class="lb"><span class="lc">// 일반 키</span>
+<span class="ls">OS if</span> lock==q:           <span class="lc">// q키</span>
+<span class="ls">OS if</span> lock==space:       <span class="lc">// 스페이스</span>
+<span class="ls">OS if</span> lock==backspace:   <span class="lc">// 백스페이스</span>
+<span class="ls">OS if</span> lock==Enter:       <span class="lc">// 엔터</span>
+<span class="ls">OS if</span> lock==Del:         <span class="lc">// Delete</span>
+<span class="ls">OS if</span> lock==Insert:      <span class="lc">// Insert</span>
+<span class="ls">OS if</span> lock==Numlock:     <span class="lc">// NumLock</span>
+
+<span class="lc">// 방향키</span>
+<span class="ls">OS if</span> lock==left:        <span class="lc">// ←</span>
+<span class="ls">OS if</span> lock==right:       <span class="lc">// →</span>
+<span class="ls">OS if</span> lock==up:          <span class="lc">// ↑</span>
+<span class="ls">OS if</span> lock==down:        <span class="lc">// ↓</span>
+
+<span class="lc">// 마우스 클릭</span>
+<span class="ls">OS if</span> lock==leftclick:   <span class="lc">// 마우스 왼쪽</span>
+<span class="ls">OS if</span> lock==rightclick:  <span class="lc">// 마우스 오른쪽</span>
+
+<span class="lc">// 반복문 안에서 키 감지 예제</span>
+-<span class="ls">move</span>(x,5)
+<span class="ls">OS if</span> lock==space return start at -  <span class="lc">// 스페이스 누를때까지</span></code>
+
+<span class="lh">15. 함수</span>
+<code class="lb"><span class="lc">// 함수 정의</span>
+<span class="ls">OS fun</span> sum(a,b){
+return a+b
+}
+<span class="lc">// 함수 호출</span>
+<span class="ls">printn</span>(sum(3,2))       <span class="lc">// 5</span>
+<span class="ls">print</span>(sum(10,20))</code>
+
+<span class="lh">16. import / play</span>
+<p>편집자 모드에서 .osios 파일 업로드 후:</p>
+<code class="lb"><span class="lc">// 함수 불러오기</span>
+<span class="ls">import</span> example.osios
+<span class="ls">printn</span>(sum(1,2))
+
+<span class="lc">// osios 파일 실행 (현재 출력 아래에서)</span>
+<span class="ls">play</span>(example.osios)</code>
+
+<span class="lh">17. OS clr</span>
+<code class="lb"><span class="ls">OS clr</span>               <span class="lc">// 출력 전체 지우기</span></code>
+
+<span class="lh">18. console</span>
+<p>괄호 안의 JS 코드를 브라우저에서 그대로 실행</p>
+<code class="lb"><span class="ls">console</span>(alert("hello"))
+<span class="ls">console</span>(console.log("hi"))
+<span class="ls">console</span>(document.title = "OSLANG")</code>`;
+
+let sourceCode = '';
+let currentFileName = 'untitled';
+let editorOpen = false;
+let outputEl, inputArea, userInputEl, statusEl;
+let inputResolve = null;
+let isRunning = false;
+let stopFlag = false;
+const pressedKeys = new Set();
+let lastClick = '';
+
+const KEY_MAP = {
+  ' ': 'space', 'Backspace': 'backspace', 'Enter': 'Enter',
+  'ArrowLeft': 'left', 'ArrowRight': 'right', 'ArrowUp': 'up', 'ArrowDown': 'down',
+  'Delete': 'Del', 'Insert': 'Insert', 'NumLock': 'Numlock',
+};
+
+function getKeyName(e) {
+  return KEY_MAP[e.key] !== undefined ? KEY_MAP[e.key] : e.key.toLowerCase();
+}
+
+function onKeyDown(e) {
+  const k = getKeyName(e);
+  pressedKeys.add(k);
+  if (isRunning && e.target !== userInputEl) e.preventDefault();
+}
+function onKeyUp(e) {
+  pressedKeys.delete(getKeyName(e));
+}
+
+document.addEventListener('keydown', onKeyDown, true);
+document.addEventListener('keyup', onKeyUp, true);
+window.addEventListener('keydown', onKeyDown, true);
+window.addEventListener('keyup', onKeyUp, true);
+
+window.addEventListener('mousedown', e => {
+  lastClick = e.button === 0 ? 'leftclick' : e.button === 2 ? 'rightclick' : '';
+  pressedKeys.add(lastClick);
+}, true);
+window.addEventListener('mouseup', e => {
+  pressedKeys.delete('leftclick');
+  pressedKeys.delete('rightclick');
+  lastClick = '';
+}, true);
+let assets = {}; // filename -> { type, url, text, blob }
+
+
+
+// 한글 폰트 맵 (폰트명 → CSS font-family)
+const FONT_MAP = {
+  // 나눔 시리즈
+  '나눔고딕': "'Nanum Gothic', sans-serif",
+  '나눔명조': "'Nanum Myeongjo', serif",
+  '나눔바른고딕': "'Nanum Barun Gothic', sans-serif",
+  '나눔바른펜': "'Nanum Pen Script', cursive",
+  '나눔스퀘어': "'Nanum Square', sans-serif",
+  '나눔스퀘어라운드': "'Nanum Square Round', sans-serif",
+  '나눔손글씨': "'Nanum Brush Script', cursive",
+  // 본 시리즈
+  '본고딕': "'Noto Sans KR', sans-serif",
+  '본명조': "'Noto Serif KR', serif",
+  // 노토 시리즈
+  '노토산스': "'Noto Sans KR', sans-serif",
+  '노토세리프': "'Noto Serif KR', serif",
+  // KoPub 시리즈
+  'KoPub고딕': "'KoPub Batang', serif",
+  'KoPub돋움': "'KoPub Dotum', sans-serif",
+  'KoPub바탕': "'KoPub Batang', serif",
+  // 넥슨
+  '넥슨Lv1고딕': "'Nexon Lv1 Gothic OTF', sans-serif",
+  '넥슨풋볼고딕': "'Nexon Football Gothic', sans-serif",
+  // 카카오
+  '카카오': "'Kakao', sans-serif",
+  // 잼민이
+  '잼민이': "'Jamsil', sans-serif",
+  // 여기어때
+  '여기어때잘난체': "'Yeogiottae Jalnan', sans-serif",
+  // 배달의민족
+  '주아체': "'Baemin Jua', sans-serif",
+  '한나체': "'Baemin Hanna', sans-serif",
+  '도현체': "'Baemin Dohyeon', sans-serif",
+  '을지로체': "'Baemin Euljiro', sans-serif",
+  '기랑해랑체': "'Baemin Kirang Haerang', sans-serif",
+  '연성체': "'Baemin Yeon Sung', sans-serif",
+  // 산돌 시리즈
+  '산돌고딕Neo': "'Sandoll Gothic Neo', sans-serif",
+  '산돌명조Neo': "'Sandoll Myeongjo Neo', serif",
+  '산돌그래픽': "'Sandoll Graphic', sans-serif",
+  '산돌격동고딕': "'Sandoll Gyeokdong Gothic', sans-serif",
+  '산돌아리따돋움': "'Arita Dotum', sans-serif",
+  '산돌아리따부리': "'Arita Buri', serif",
+  '산돌아리따산스': "'Arita Sans', sans-serif",
+  '산돌희망체': "'Sandoll Huimang', sans-serif",
+  '산돌제비': "'Sandoll Jebi', sans-serif",
+  '산돌바탕': "'Sandoll Batang', serif",
+  '산돌돋움': "'Sandoll Dotum', sans-serif",
+  '산돌굴림': "'Sandoll Gulim', sans-serif",
+  '산돌궁서': "'Sandoll Gungseo', serif",
+  '산돌청청': "'Sandoll Cheongcheong', sans-serif",
+  '산돌삼립호빵체': "'Sandoll SamlipHopang', sans-serif",
+  // 윤 시리즈
+  '윤고딕': "'Yoon Gothic', sans-serif",
+  '윤명조': "'Yoon Myeongjo', serif",
+  // HY 시리즈
+  'HY고딕': "'HY Gothic', sans-serif",
+  'HY명조': "'HY Myeongjo', serif",
+  'HY헤드라인M': "'HY HeadLine M', sans-serif",
+  'HY그래픽': "'HY Graphic', sans-serif",
+  'HY견고딕': "'HY GeonGothic', sans-serif",
+  // 기본 시스템
+  '맑은고딕': "'Malgun Gothic', sans-serif",
+  '굴림': "Gulim, sans-serif",
+  '돋움': "Dotum, sans-serif",
+  '바탕': "Batang, serif",
+  '궁서': "Gungsuh, serif",
+  '굴림체': "GulimChe, sans-serif",
+  '돋움체': "DotumChe, sans-serif",
+  '바탕체': "BatangChe, serif",
+  '궁서체': "GungsuhChe, serif",
+};
+
+// Load Google Fonts for supported fonts
+(function loadGoogleFonts() {
+  const googleFonts = [
+    'Nanum+Gothic', 'Nanum+Myeongjo', 'Nanum+Pen+Script',
+    'Nanum+Gothic+Coding', 'Noto+Sans+KR', 'Noto+Serif+KR',
+    'Nanum+Square+Round'
+  ];
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'https://fonts.googleapis.com/css2?family=' + googleFonts.join('&family=') + '&display=swap';
+  document.head.appendChild(link);
+})();
+
+window.onload = () => {
+  // sessionStorage에서 복원, 없으면 편집자 모드로 시작
+  const _src = sessionStorage.getItem('osios_source');
+  if (_src !== null) {
+    sourceCode = _src;
+    currentFileName = sessionStorage.getItem('osios_filename') || 'untitled';
+    try { const a = JSON.parse(sessionStorage.getItem('osios_assets')||'{}'); if(a) assets = a; } catch(e) {}
+    const _ed = sessionStorage.getItem('osios_editor') === '1';
+    sessionStorage.removeItem('osios_source');
+    sessionStorage.removeItem('osios_filename');
+    sessionStorage.removeItem('osios_assets');
+    sessionStorage.removeItem('osios_editor');
+    document.getElementById('code-editor').value = sourceCode;
+    openApp(_ed);
+  } else {
+    // 직접 열었을 때 편집자 모드로 바로 시작
+    openEditorMode();
+  }
+  outputEl = document.getElementById('output-display');
+  inputArea = document.getElementById('input-area');
+  userInputEl = document.getElementById('user-input');
+  statusEl = document.getElementById('status-text');
+
+  const zone = document.getElementById('upload-zone');
+  if (zone) {
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+    });
+  }
+  const _fi2 = document.getElementById('file-input');
+  if (_fi2) _fi2.addEventListener('change', e => {
+    if (e.target.files[0]) loadFile(e.target.files[0]);
+  });
+  userInputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && inputResolve) {
+      const val = userInputEl.value;
+      userInputEl.value = '';
+      inputArea.classList.remove('active');
+      appendOutput('› ' + val + '\n', 'out-system');
+      inputResolve(val);
+      inputResolve = null;
+    }
+  });
+  document.getElementById('code-editor').addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const ta = e.target, s = ta.selectionStart, en = ta.selectionEnd;
+      ta.value = ta.value.substring(0, s) + '    ' + ta.value.substring(en);
+      ta.selectionStart = ta.selectionEnd = s + 4;
+    }
+  });
+
+  document.getElementById('asset-input').addEventListener('change', e => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      const ext = file.name.split('.').pop().toLowerCase();
+      const textTypes = ['js','html','htm','css','txt','py','json','osios','hwpx','md','xml','csv'];
+      if (textTypes.includes(ext)) {
+        reader.onload = ev => {
+          assets[file.name] = { type: 'text', ext, text: ev.target.result, name: file.name };
+          updateAssetList();
+        };
+        reader.readAsText(file);
+      } else {
+        reader.onload = ev => {
+          assets[file.name] = { type: 'binary', ext, url: ev.target.result, name: file.name };
+          updateAssetList();
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    e.target.value = '';
+  });
+};
+
+function loadFile(file) {
+  if (!file.name.endsWith('.osios')) { alert('.osios 파일만 업로드할 수 있습니다!'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const raw = e.target.result;
+    try {
+      const bundle = JSON.parse(raw);
+      if (bundle.__osios_bundle__) {
+        sourceCode = bundle.code;
+        assets = {};
+        for (const [name, asset] of Object.entries(bundle.assets || {})) {
+          assets[name] = asset;
+        }
+        updateAssetList();
+        currentFileName = file.name.replace('.osios', '');
+        document.getElementById('code-editor').value = sourceCode;
+        openApp(false);
+        return;
+      }
+    } catch(e) {}
+    sourceCode = raw;
+    currentFileName = file.name.replace('.osios', '');
+    document.getElementById('code-editor').value = sourceCode;
+    openApp(false);
+  };
+  reader.readAsText(file);
+}
+
+function openEditorMode() {
+  sourceCode = '';
+  currentFileName = 'untitled';
+  openApp(true);
+}
+
+function openApp(withEditor) {
+  const _us = document.getElementById('upload-screen'); if (_us) _us.classList.add('hidden');
+  const app = document.getElementById('app');
+  app.classList.add('visible', 'fade-up');
+  updateSourcePanel();
+  updateFname();
+  if (withEditor) {
+    editorOpen = true;
+    document.getElementById('editor-panel').classList.add('visible');
+    document.getElementById('editor-toggle-btn').classList.add('active');
+    document.getElementById('source-panel').classList.add('hidden');
+    document.getElementById('home-btn').classList.add('visible');
+  }
+}
+
+function updateSourcePanel() {
+  const lines = sourceCode.split('\n');
+  document.getElementById('line-count-label').textContent = lines.length + ' lines';
+  document.getElementById('code-display').innerHTML = lines.map(line =>
+    `<span class="line">${highlight(escapeHtml(line))}</span>`
+  ).join('');
+}
+
+function openLearn() {
+  document.getElementById('learn-content').innerHTML = LEARN_HTML;
+  document.getElementById('learn-modal').style.display = 'block';
+}
+function closeLearn() {
+  document.getElementById('learn-modal').style.display = 'none';
+}
+
+function updateAssetList() {
+  const list = document.getElementById('asset-list');
+  const names = Object.keys(assets);
+  if (names.length === 0) { list.style.display = 'none'; return; }
+  list.style.display = 'block';
+  list.innerHTML = names.map(n =>
+    `<span style="font-family:var(--mono);font-size:10px;color:var(--accent2);margin-right:8px;display:inline-flex;align-items:center;gap:4px;">
+      📎 ${n}
+      <button onclick="deleteAsset('${n}')" style="background:transparent;border:none;color:var(--error);cursor:pointer;font-size:11px;padding:0 2px;opacity:0.7;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">✕</button>
+    </span>`
+  ).join('');
+}
+
+function deleteAsset(name) {
+  delete assets[name];
+  updateAssetList();
+}
+
+function updateFname() {
+  document.getElementById('fname-display').innerHTML = `<strong>${currentFileName}.osios</strong>`;
+}
+
+function toggleEditor() {
+  editorOpen = !editorOpen;
+  document.getElementById('editor-panel').classList.toggle('visible', editorOpen);
+  document.getElementById('editor-toggle-btn').classList.toggle('active', editorOpen);
+  document.getElementById('home-btn').classList.toggle('visible', editorOpen);
+  // 편집자 모드 켜지면 소스 패널 숨기기, 꺼지면 소스 있을 때만 보이기
+  if (editorOpen) {
+    document.getElementById('source-panel').classList.add('hidden');
+  } else {
+    if (sourceCode) document.getElementById('source-panel').classList.remove('hidden');
+  }
+}
+
+async function saveFile() {
+  const code = editorOpen ? document.getElementById('code-editor').value : sourceCode;
+  const content = Object.keys(assets).length > 0
+    ? JSON.stringify({ __osios_bundle__: true, code, assets })
+    : code;
+  const blob = new Blob([content], { type: 'text/plain' });
+
+  // Try modern File System Access API (파일 이름/위치 선택 가능)
+  if (window.showSaveFilePicker) {
+    try {
+      const fileHandle = await window.showSaveFilePicker({
+        suggestedName: currentFileName + '.osios',
+        types: [{
+          description: 'OSLANG Source File',
+          accept: { 'text/plain': ['.osios'] }
+        }]
+      });
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      // Update current file name from saved file
+      currentFileName = fileHandle.name.replace('.osios', '');
+      updateFname();
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return; // 사용자가 취소
+    }
+  }
+
+  // Fallback: 기존 방식
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = currentFileName + '.osios';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function clearOutput() {
+  outputEl.innerHTML = '';
+}
+
+function resetAll() {
+  sourceCode = ''; currentFileName = 'untitled'; editorOpen = false; isRunning = false; inputResolve = null;
+  assets = {};
+  inputArea.classList.remove('active');
+  document.getElementById('source-panel').classList.remove('hidden');
+  document.getElementById('editor-panel').classList.remove('visible');
+  document.getElementById('editor-toggle-btn').classList.remove('active');
+  document.getElementById('home-btn').classList.remove('visible');
+  document.getElementById('app').classList.remove('visible');
+  window.location.href = 'index.html'; return;
+  const _fi = document.getElementById('file-input'); if(_fi) _fi.value = '';
+  document.getElementById('asset-input').value = '';
+  document.getElementById('code-editor').value = '';
+  document.getElementById('asset-list').style.display = 'none';
+  document.getElementById('asset-list').innerHTML = '';
+  outputEl.innerHTML = '<span class="out-system">// 실행 대기 중...</span>';
+  setStatus('READY', '');
+}
+
+function setStatus(text, cls) {
+  statusEl.textContent = text;
+  statusEl.className = 'status-text' + (cls ? ' ' + cls : '');
+}
+
+function waitForInput() {
+  return new Promise(resolve => {
+    inputResolve = resolve;
+    inputArea.classList.add('active');
+    userInputEl.focus();
+  });
+}
+
+function stopCode() {
+  stopFlag = true;
+  // Clear output and reset to initial state after stop
+  setTimeout(() => {
+    clearOutput();
+    setStatus('READY', '');
+  }, 50);
+}
+
+async function runCode() {
+  if (isRunning) return;
+  let code = editorOpen ? document.getElementById('code-editor').value : sourceCode;
+  if (editorOpen) {
+    sourceCode = code;
+    updateSourcePanel();
+  }
+  if (!code.trim()) { appendOutput('[Error] No code to execute\n', 'out-error'); return; }
+  isRunning = true;
+  stopFlag = false;
+  clearOutput();
+  document.getElementById('btn-run').disabled = true;
+  document.getElementById('btn-stop').style.display = 'inline-block';
+  setStatus('RUNNING...', 'running');
+  // Aggressively focus output panel to capture keys
+  outputEl.focus();
+  outputEl.click();
+  setTimeout(() => outputEl.focus(), 50);
+  setTimeout(() => outputEl.focus(), 200);
+  const lines = code.split('\n').map(l => l.replace(/\r/g, ''));
+  try {
+    await interpret(lines);
+    setStatus('DONE', '');
+  } catch(e) {
+    if (e && e.__return__) {
+      // return outside function — ignore
+    } else if (e && e.message === '__STOP__') {
+      setStatus('STOPPED', '');
+    } else if (e && e.message !== '__FINISH__') {
+      appendOutput('\n[Error] ' + (e.message || JSON.stringify(e)), 'out-error');
+      setStatus('ERROR', 'error');
+    } else {
+      setStatus('FINISHED', '');
+    }
+  }
+  isRunning = false;
+  stopFlag = false;
+  document.getElementById('btn-run').disabled = false;
+  document.getElementById('btn-stop').style.display = 'none';
+}
+
+function updateImgPositions(imgPos) {
+  for (const [name, pos] of Object.entries(imgPos)) {
+    if (name === '__selected__') continue;
+    const angle = pos.angle || 0;
+    outputEl.querySelectorAll(`img[data-imgname="${name}"], iframe[data-imgname="${name}"]`).forEach(el => {
+      el.style.transform = `translate(${pos.x||0}px, ${pos.y||0}px) rotate(${angle}deg)`;
+    });
+  }
+}
+
+function checkTouch(name1, name2, imgPos) {
+  const el1 = outputEl.querySelector(`img[data-imgname="${name1}"], iframe[data-imgname="${name1}"]`);
+  const el2 = outputEl.querySelector(`img[data-imgname="${name2}"], iframe[data-imgname="${name2}"]`);
+  if (!el1 || !el2) return false;
+  const r1 = el1.getBoundingClientRect();
+  const r2 = el2.getBoundingClientRect();
+  return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+}
+
+// ── HELPERS ──
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function highlight(line) {
+  if (/^\s*OS nocode:/.test(line)) return `<span class="kw-comment">${line}</span>`;
+  if (/^\s*powerful OS:/.test(line)) return `<span class="kw-powerful">${line}</span>`;
+  if (/^\s*broke OS:/.test(line)) return `<span class="kw-broke">${line}</span>`;
+  line = line.replace(/(OS\s+(?:scan|int|list|dic|data|if|change|finish))/g, '<span class="kw-os">$1</span>');
+  line = line.replace(/\b(printn|print)\b/g, '<span class="kw-print">$1</span>');
+  line = line.replace(/(\(\(.*?\)\))/g, '<span class="kw-string">$1</span>');
+  line = line.replace(/\b(\d+)\b/g, '<span class="kw-number">$1</span>');
+  line = line.replace(/(==|!=|&gt;=|&lt;=|&gt;|&lt;|%)/g, '<span class="kw-op">$1</span>');
+  return line;
+}
+
+function appendOutput(text, cls = 'out-normal') {
+  outputEl.querySelectorAll('.out-system').forEach(n => { if (n.textContent.includes('실행 대기')) n.remove(); });
+  const span = document.createElement('span');
+  span.className = cls;
+  span.textContent = text;
+  outputEl.appendChild(span);
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+// ── INTERPRETER ──
+
+async function interpret(lines) {
+  const images = {};
+  const imgPos = {}; // name -> {x, y, angle, w, h}
+  const funcs = {};
+  const ctx = { nextImgSize: null }; // shared context for img size setting
+  await execBlock(lines, 0, lines.length, {}, { size:null, font:null, color:null }, new Set(), null, images, imgPos, funcs);
+}
+
+async function callFunc(fname, argVals, vars, ps, ignored, images, imgPos, funcs) {
+  const fn = funcs[fname];
+  if (!fn) return '__UNDEFINED__';
+  const localVars = { ...vars };
+  fn.params.forEach((p, idx) => { localVars[p] = argVals[idx] !== undefined ? argVals[idx] : 0; });
+  try {
+    await execBlock(fn.body, 0, fn.body.length, localVars, ps, ignored, null, images, imgPos, funcs);
+  } catch(e) {
+    if (e && e.__return__) return e.value;
+    throw e;
+  }
+  return '';
+}
+
+function parseFuncCall(expr) {
+  const m = expr.match(/^(\w+)\(([^)]*)\)$/);
+  if (!m) return null;
+  const args = m[2] ? m[2].split(',').map(s => s.trim()) : [];
+  return { name: m[1], args };
+}
+
+function getIndent(line) {
+  let c = 0;
+  for (let ch of line) { if (ch===' ') c++; else if (ch==='\t') c+=4; else break; }
+  return c;
+}
+
+function evalExpr(expr, vars) {
+  expr = expr.trim();
+  // Never eval return statements
+  if (expr.startsWith('return ') || expr === 'return') return expr;
+  const varNames = Object.keys(vars).sort((a,b) => b.length - a.length);
+  let js = expr;
+  for (const v of varNames) {
+    const val = vars[v];
+    const esc = v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (/[\[\]]/.test(v)) {
+      const replacement = typeof val === 'string' ? JSON.stringify(val) : String(val);
+      js = js.split(v).join(replacement);
+    } else {
+      js = typeof val === 'string'
+        ? js.replace(new RegExp('\\b'+esc+'\\b','g'), JSON.stringify(val))
+        : js.replace(new RegExp('\\b'+esc+'\\b','g'), String(val));
+    }
+  }
+  try { return Function('"use strict"; return ('+js+')')(); } catch(e) { return expr; }
+}
+
+function evalExprSafe(expr, vars) {
+  expr = expr.trim();
+  // Pure variable name
+  if (/^\w+$/.test(expr) && !(expr in vars)) return '__UNDEFINED__';
+  // List access like lister[2] — key is stored as "lister[2]" in vars
+  if (/^\w+\[\d+\]$/.test(expr) && !(expr in vars)) return '__UNDEFINED__';
+  return evalExpr(expr, vars);
+}
+
+function resolveVal(val, vars) {
+  val = val.trim();
+  if (val.startsWith('((') && val.endsWith('))')) {
+    // Replace (_) with space inside string literal
+    return val.slice(2,-2).replace(/\(_\)/g, ' ');
+  }
+  return String(evalExpr(val, vars));
+}
+
+function getChildBlock(lines, parentIdx, end, parentIndent) {
+  const childIndent = parentIndent + 4;
+  const childLines = [];
+  let j = parentIdx + 1;
+  while (j < end) {
+    const l = lines[j];
+    if (l === undefined || l.trim() === '') { childLines.push(''); j++; continue; }
+    if (getIndent(l) >= childIndent) { childLines.push(l.slice(4)); j++; }
+    else break;
+  }
+  return { childLines, nextI: j };
+}
+
+function printOut(text, newline, settings) {
+  outputEl.querySelectorAll('.out-system').forEach(n => { if (n.textContent.includes('실행 대기')) n.remove(); });
+  const span = document.createElement('span');
+  span.className = 'out-normal';
+  if (settings.color) span.style.color = settings.color;
+  if (settings.font) span.style.fontFamily = settings.font;
+  if (settings.size) span.style.fontSize = settings.size.replace('pt','px');
+  span.textContent = text + (newline ? '\n' : '');
+  outputEl.appendChild(span);
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+async function execBlock(lines, start, end, vars, ps, ignored, lastIf, images={}, imgPos={}, funcs={}) {
+  let i = start;
+  let _lastIf = lastIf;
+
+  while (i < end) {
+    const raw = lines[i];
+    if (raw === undefined) { i++; continue; }
+    const line = raw.trim();
+    const indent = getIndent(raw);
+    if (!line) { i++; continue; }
+
+    if (line === 'OS finish code:') {
+      appendOutput('[Program terminated]\n', 'out-system');
+      throw { message: '__FINISH__' };
+    }
+
+    // ── return (함수 내부) ──
+    if (line.startsWith('return ')) {
+      const expr = line.slice(7).trim();
+      const val = evalExpr(expr, vars);
+      throw { __return__: true, value: val };
+    }
+
+    // ── OS clr — clear output ──
+    if (line === 'OS clr') {
+      clearOutput();
+      i++; continue;
+    }
+
+    // ── OS fun name(params){ ... } — function definition ──
+    const mFun = line.match(/^OS fun (\w+)\(([^)]*)\)\{$/);
+    if (mFun) {
+      const fname = mFun[1];
+      const params = mFun[2].split(',').map(s => s.trim()).filter(Boolean);
+      const body = [];
+      let j = i + 1;
+      while (j < end) {
+        const bl = lines[j].trim();
+        if (bl === '}') { j++; break; }
+        body.push(bl); // store trimmed lines
+        j++;
+      }
+      funcs[fname] = { params, body };
+      i = j; continue;
+    }
+
+    // ── import example.osios — 함수만 가져오기 ──
+    const mImport = line.match(/^import (\S+\.osios)$/);
+    if (mImport) {
+      const fname = mImport[1];
+      const asset = assets[fname];
+      if (asset && asset.text) {
+        let importCode = asset.text;
+        try {
+          const bundle = JSON.parse(importCode);
+          if (bundle.__osios_bundle__) importCode = bundle.code;
+        } catch(e) {}
+        const importLines = importCode.split('\n').map(l => l.replace(/\r/g,''));
+        // 함수 정의만 추출 (OS fun ... } 블록만)
+        let j = 0;
+        while (j < importLines.length) {
+          const il = importLines[j].trim();
+          const mf = il.match(/^OS fun (\w+)\(([^)]*)\)\{$/);
+          if (mf) {
+            const fname2 = mf[1];
+            const params = mf[2].split(',').map(s => s.trim()).filter(Boolean);
+            const body = [];
+            j++;
+            while (j < importLines.length) {
+              const bl = importLines[j].trim();
+              if (bl === '}') { j++; break; }
+              body.push(bl);
+              j++;
+            }
+            funcs[fname2] = { params, body };
+          } else {
+            j++;
+          }
+        }
+      } else {
+        appendOutput(`[Error] import: ${fname} not found\n`, 'out-error');
+      }
+      i++; continue;
+    }
+
+    // ── play(example.osios) — 파일을 완전히 새로 실행 ──
+    const mPlay = line.match(/^play\((\S+\.osios)\)$/);
+    if (mPlay) {
+      const fname = mPlay[1];
+      const asset = assets[fname];
+      if (asset && asset.text) {
+        let playCode = asset.text;
+        try {
+          const bundle = JSON.parse(playCode);
+          if (bundle.__osios_bundle__) {
+            playCode = bundle.code;
+            // bundle assets도 같이 로드
+            for (const [n, a] of Object.entries(bundle.assets || {})) {
+              if (!assets[n]) assets[n] = a;
+            }
+          }
+        } catch(e) {}
+        const playLines = playCode.split('\n').map(l => l.replace(/\r/g,''));
+        // 완전히 새 컨텍스트로 실행
+        const playImages = {};
+        const playImgPos = {};
+        const playFuncs = {};
+        await execBlock(playLines, 0, playLines.length, {}, ps, new Set(), null, playImages, playImgPos, playFuncs);
+      } else {
+        appendOutput(`[Error] play: ${fname} not found\n`, 'out-error');
+      }
+      i++; continue;
+    }
+
+    if (line.startsWith('OS nocode:')) { i++; continue; }
+
+    // ── img WpxHpx — set next image display size ──
+    const mImgSize = line.match(/^img (\d+)px\*(\d+)px;?$/);
+    if (mImgSize) {
+      imgPos.__nextImgSize__ = { w: parseInt(mImgSize[1]), h: parseInt(mImgSize[2]) };
+      i++; continue;
+    }
+
+    // ── img name=xxx.png: with img-html(html코드) ──
+    const mImgHtml = line.match(/^img name=(\S+):$/);
+    if (mImgHtml) {
+      const name = mImgHtml[1];
+      const { childLines, nextI } = getChildBlock(lines, i, end, indent);
+      let htmlContent = '';
+      for (const cl of childLines) {
+        const cmd = cl.trim();
+        if (!cmd) continue;
+        if (cmd.startsWith('img-html(') && cmd.endsWith(')')) {
+          htmlContent += cmd.slice(9, -1);
+        } else {
+          htmlContent += cmd;
+        }
+      }
+      // Store as iframe-renderable HTML image
+      images[name] = { type: 'html', html: htmlContent, w: 400, h: 300 };
+      i = nextI; continue;
+    }
+
+    // ── OS WxH,imgname: (image creation) ──
+    const mImg = line.match(/^OS (\d+)\*(\d+),(\S+):$/);
+    if (mImg) {
+      const w = parseInt(mImg[1]), h = parseInt(mImg[2]), name = mImg[3];
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, w, h);
+      images[name] = { canvas, ctx, w, h };
+      // Process child block (image drawing commands)
+      const { childLines, nextI } = getChildBlock(lines, i, end, indent);
+      for (const cl of childLines) {
+        const cmd = cl.trim();
+        if (!cmd) continue;
+        // all #color — fill entire canvas
+        if (cmd.startsWith('all ')) {
+          const color = cmd.slice(4).trim();
+          ctx.fillStyle = color;
+          ctx.fillRect(0, 0, w, h);
+        }
+        // pixel x,y #color — set single pixel
+        else if (cmd.startsWith('pixel ')) {
+          const pm = cmd.match(/^pixel (\d+),(\d+) (.+)$/);
+          if (pm) {
+            ctx.fillStyle = pm[3].trim();
+            ctx.fillRect(parseInt(pm[1])-1, parseInt(pm[2])-1, 1, 1);
+          }
+        }
+        // rect x1,y1,x2,y2 #color
+        else if (cmd.startsWith('rect ')) {
+          const rm = cmd.match(/^rect (\d+),(\d+),(\d+),(\d+) (.+)$/);
+          if (rm) {
+            ctx.fillStyle = rm[5].trim();
+            ctx.fillRect(parseInt(rm[1])-1, parseInt(rm[2])-1, parseInt(rm[3])-parseInt(rm[1])+1, parseInt(rm[4])-parseInt(rm[2])+1);
+          }
+        }
+      }
+      i = nextI; continue;
+    }
+
+    if (line.startsWith('broke OS:start no ')) { ignored.add(line.slice(18).trim()); i++; continue; }
+    if (line.startsWith('broke OS:finish no ')) { ignored.delete(line.slice(19).trim()); i++; continue; }
+
+    if (line.startsWith('powerful OS:')) {
+      const cmd = line.slice(12).trim();
+      if (cmd.startsWith('open link ')) {
+        const url = cmd.slice(10).trim();
+        window.open(url.startsWith('http') ? url : 'https://'+url, '_blank');
+        appendOutput(`[Link opened: ${url}]\n`, 'out-system');
+      } else if (cmd.startsWith('download ')) {
+        // Download image if it exists in images store
+        const fname = cmd.slice(9).trim();
+        if (images[fname]) {
+          const a = document.createElement('a');
+          a.href = images[fname].canvas.toDataURL('image/png');
+          a.download = fname;
+          a.click();
+          appendOutput(`[Downloaded: ${fname}]\n`, 'out-system');
+        } else {
+          appendOutput(`[Download: ${fname}]\n`, 'out-system');
+        }
+      } else if (cmd.startsWith('del ')) {
+        const fname = cmd.slice(4).trim();
+        if (assets[fname]) {
+          delete assets[fname];
+          updateAssetList();
+          appendOutput(`[Deleted: ${fname}]\n`, 'out-system');
+        } else {
+          appendOutput(`[Deleted: ${fname}]\n`, 'out-system');
+        }
+      }
+      i++; continue;
+    }
+
+    // ── console(코드) — run JS in browser console ──
+    if (line.startsWith('console(') && line.endsWith(')')) {
+      const jsCode = line.slice(8, -1);
+      try {
+        eval(jsCode);
+        appendOutput(`[console] ${jsCode}\n`, 'out-system');
+      } catch(e) {
+        appendOutput(`[Error] console: ${e.message}\n`, 'out-error');
+      }
+      i++; continue;
+    }
+
+    if (line.startsWith('OS change print:')) {
+      const ci = indent + 4; let j = i+1;
+      while (j < end && (lines[j].trim()==='' || getIndent(lines[j])>=ci)) {
+        const cl = lines[j].trim();
+        if (cl.startsWith('print(') && cl.endsWith(')')) {
+          cl.slice(6,-1).split(',').map(s=>s.trim()).forEach(a => {
+            if (a.endsWith('pt')) {
+              ps.size = a.replace('pt','') + 'px';
+            } else if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(a)) {
+              // HEX color
+              ps.color = a;
+            } else if (['red','blue','green','yellow','white','black','orange','purple','pink','gray','grey','cyan','magenta'].includes(a)) {
+              ps.color = a;
+            } else if (a) {
+              // Font name — map Korean font names to web-safe or Google Fonts equivalents
+              ps.font = FONT_MAP[a] || a;
+            }
+          });
+        }
+        j++;
+      }
+      i=j; continue;
+    }
+
+    if (line.startsWith('-') && !line.startsWith('--')) {
+      const rLines=[]; let j=i;
+      while (j<end && lines[j]!==undefined) {
+        const curLine = lines[j].trim();
+        if (curLine.match(/^(\d+)return start at -$/) || curLine.match(/^OS if .+ return start at -$/)) break;
+        const raw = lines[j];
+        if (curLine.startsWith('-') && getIndent(raw)===indent) {
+          rLines.push(curLine.slice(1)); // remove the - but KEEP original indentation of children
+          j++;
+          // Collect child lines — keep their original indentation (don't strip)
+          while (j<end && lines[j]!==undefined) {
+            const cl = lines[j];
+            const clTrim = cl.trim();
+            if (!clTrim) { j++; continue; }
+            if (clTrim.match(/^(\d+)return start at -$/) || clTrim.match(/^OS if .+ return start at -$/)) break;
+            if (getIndent(cl) > indent) {
+              rLines.push(cl); // keep full indentation
+              j++;
+            } else break;
+          }
+        } else break;
+      }
+      let rCount = 1;
+      let condRepeat = null;
+      if (j < end) {
+        const m = lines[j].trim().match(/^(\d+)return start at -$/);
+        if (m) { rCount = parseInt(m[1]); j++; }
+        const mc = lines[j] && lines[j].trim().match(/^OS if (.+) return start at -$/);
+        if (mc) { condRepeat = mc[1]; j++; }
+      }
+      if (condRepeat) {
+        const isInfinite = condRepeat === '0=True' || condRepeat === '0==True';
+        while (true) {
+          if (stopFlag) throw { message: '__STOP__' };
+          await execBlock(rLines, 0, rLines.length, vars, ps, ignored, null, images, imgPos, funcs);
+          updateImgPositions(imgPos);
+          // Show pressed keys in status bar for debugging
+          if (pressedKeys.size > 0) {
+            document.getElementById('status-right').textContent = '⌨ ' + [...pressedKeys].join('+');
+          } else {
+            document.getElementById('status-right').textContent = '';
+          }
+          // Use requestAnimationFrame for smooth game loop
+          await new Promise(r => setTimeout(r, 16));
+          if (isInfinite) continue;
+          // Check lock condition
+          const lockM2 = condRepeat.match(/^lock==(\S+)$/);
+          if (lockM2) {
+            if (pressedKeys.has(lockM2[1]) || lastClick === lockM2[1]) break;
+            continue;
+          }
+          // Check coordinate condition
+          let cond = condRepeat;
+          cond = cond.replace(/(\S+)\(x\)/g, (_, n) => imgPos[n] ? imgPos[n].x : 0);
+          cond = cond.replace(/(\S+)\(y\)/g, (_, n) => imgPos[n] ? imgPos[n].y : 0);
+          try { if (!!Function('"use strict"; return (' + cond + ')')()) break; } catch(e) { break; }
+        }
+      } else {
+        for (let r = 0; r < rCount; r++) {
+          if (stopFlag) throw { message: '__STOP__' };
+          await execBlock(rLines, 0, rLines.length, vars, ps, ignored, null, images, imgPos, funcs);
+          updateImgPositions(imgPos);
+          await new Promise(r => setTimeout(r, 16));
+        }
+      }
+      i = j; continue;
+    }
+
+    // ── #imgname — select image for move ──
+    if (line.startsWith('#') && !line.startsWith('#!')) {
+      const imgName = line.slice(1).trim();
+      if (assets[imgName] || images[imgName]) {
+        imgPos['__selected__'] = imgName;
+        if (!imgPos[imgName]) imgPos[imgName] = { x: 0, y: 0 };
+      }
+      i++; continue;
+    }
+
+    // ── move(axis, amount) / move(spin, angle) ──
+    const mMove = line.match(/^move\(([xy]|spin),(-?\d+)\)$/);
+    if (mMove) {
+      const sel = imgPos['__selected__'] || vars['__selectedImg__'];
+      if (sel) {
+        if (!imgPos[sel]) imgPos[sel] = { x: 0, y: 0, angle: 0 };
+        if (mMove[1] === 'x') imgPos[sel].x += parseInt(mMove[2]);
+        else if (mMove[1] === 'y') imgPos[sel].y += parseInt(mMove[2]);
+        else if (mMove[1] === 'spin') {
+          imgPos[sel].angle = (imgPos[sel].angle || 0) + parseInt(mMove[2]);
+        }
+      }
+      i++; continue;
+    }
+
+    const mInt = line.match(/^OS int (\w+)=(.+):$/);
+    if (mInt) {
+      const { childLines, nextI } = getChildBlock(lines, i, end, indent);
+      await execBlock(childLines, 0, childLines.length, {...vars, [mInt[1]]: evalExpr(mInt[2],vars)}, ps, ignored, null, images, imgPos, funcs);
+      i=nextI; continue;
+    }
+
+    const mScan = line.match(/^OS scan int (\w+):$/);
+    if (mScan) {
+      const input = await waitForInput();
+      const val = isNaN(input.trim()) ? input : Number(input);
+      const { childLines, nextI } = getChildBlock(lines, i, end, indent);
+      await execBlock(childLines, 0, childLines.length, {...vars, [mScan[1]]: val}, ps, ignored, null, images, imgPos, funcs);
+      i=nextI; continue;
+    }
+
+    const mScanList = line.match(/^OS scan list\((\d+|all)\):$/);
+    if (mScanList) {
+      const input = await waitForInput();
+      const tokens = input.trim().split(/\s+/).filter(Boolean);
+      const count = mScanList[1]==='all' ? tokens.length : parseInt(mScanList[1]);
+      const lv = {};
+      for (let k=0;k<count;k++) lv[`list[${k+1}]`] = isNaN(tokens[k]) ? (tokens[k]||'') : Number(tokens[k]);
+      const { childLines, nextI } = getChildBlock(lines, i, end, indent);
+      await execBlock(childLines, 0, childLines.length, {...vars, ...lv}, ps, ignored, null, images, imgPos, funcs);
+      i=nextI; continue;
+    }
+
+    const mList = line.match(/^OS list (\w+)=\[(.+)\].*:$/);
+    if (mList) {
+      const lv={};
+      mList[2].split(',').map(s=>s.trim()).forEach((item,idx) => {
+        const vm=item.match(/^(\d+)(\w+)$/);
+        lv[`${mList[1]}[${idx+1}]`] = vm&&vars[vm[2]] ? vars[vm[2]] : (isNaN(item)?item:Number(item));
+      });
+      const { childLines, nextI } = getChildBlock(lines, i, end, indent);
+      await execBlock(childLines, 0, childLines.length, {...vars, ...lv}, ps, ignored, null, images, imgPos, funcs);
+      i=nextI; continue;
+    }
+
+    // OS data i="2""1""3":  → i1="2", i2="1", i3="3"
+    const mData = line.match(/^OS data (\w+)=(.+):$/);
+    if (mData) {
+      const dv={};
+      const dataName = mData[1];
+      const raw = mData[2];
+      // Extract all "..." tokens
+      const tokens = [];
+      const re = /"([^"]*)"/g; let m2;
+      while ((m2 = re.exec(raw)) !== null) tokens.push(m2[1]);
+      tokens.forEach((val, idx) => { dv[`${dataName}${idx+1}`] = val; });
+      const { childLines, nextI } = getChildBlock(lines, i, end, indent);
+      await execBlock(childLines, 0, childLines.length, {...vars, ...dv}, ps, ignored, null, images, imgPos, funcs);
+      i=nextI; continue;
+    }
+
+    const mDic = line.match(/^OS dic (\w+)=\{(.+)\}:$/);
+    if (mDic) {
+      const dd={};
+      mDic[2].split(',').forEach(pair => {
+        const [k,v]=pair.split(':').map(s=>s.trim());
+        dd[k]=isNaN(v)?v:Number(v);
+      });
+      const { childLines, nextI } = getChildBlock(lines, i, end, indent);
+      await execBlock(childLines, 0, childLines.length, {...vars, [`__dic_${mDic[1]}`]:dd}, ps, ignored, null, images, imgPos, funcs);
+      i=nextI; continue;
+    }
+
+    if (line.match(/^OS if .+:$/)) {
+      if (line === 'OS if first if!=True:') {
+        const { childLines, nextI } = getChildBlock(lines, i, end, indent);
+        if (_lastIf !== true) {
+          await execBlock(childLines, 0, childLines.length, vars, ps, ignored, null, images, imgPos, funcs);
+          _lastIf = true;
+        } else { _lastIf = false; }
+        i=nextI; continue;
+      } else {
+        const mc = line.match(/^OS if (.+):$/);
+        let cond = mc[1];
+        let result = false;
+        // OS if lock==key: — key detection
+        const lockM = cond.match(/^lock==(\S+)$/);
+        // OS if img1 touch img2: — collision detection
+        const touchM = cond.match(/^(\S+) touch (\S+)$/);
+        if (lockM) {
+          const key = lockM[1];
+          result = pressedKeys.has(key) || lastClick === key;
+        } else if (touchM) {
+          result = checkTouch(touchM[1], touchM[2], imgPos);
+        } else if (cond === '0=True' || cond === '0==True') {
+          result = true;
+        } else {
+          result = !!evalExpr(cond, vars);
+        }
+        _lastIf = result;
+        const { childLines, nextI } = getChildBlock(lines, i, end, indent);
+        if (result) await execBlock(childLines, 0, childLines.length, vars, ps, ignored, null, images, imgPos, funcs);
+        i=nextI; continue;
+      }
+    }
+
+    // ── OS print((text)): → movable text ──
+    const mOSPrint = line.match(/^OS print\((.+)\):$/);
+    if (mOSPrint) {
+      const textContent = mOSPrint[1];
+      const { childLines, nextI } = getChildBlock(lines, i, end, indent);
+      // Create a movable span for the text
+      const resolved = textContent.startsWith('(') && textContent.endsWith(')')
+        ? textContent.slice(1,-1).replace(/\(_\)/g,' ')
+        : String(evalExprSafe(textContent, vars) === '__UNDEFINED__' ? textContent : evalExprSafe(textContent, vars));
+      outputEl.querySelectorAll('.out-system').forEach(n => { if (n.textContent.includes('실행 대기')) n.remove(); });
+      const span = document.createElement('span');
+      span.className = 'out-normal';
+      span.dataset.movable = 'text_' + Date.now();
+      if (ps.color) span.style.color = ps.color;
+      if (ps.font) span.style.fontFamily = ps.font;
+      if (ps.size) span.style.fontSize = ps.size;
+      span.style.display = 'inline-block';
+      span.textContent = resolved;
+      outputEl.appendChild(span);
+      // Store in imgPos for move tracking
+      const movKey = span.dataset.movable;
+      imgPos[movKey] = { x: 0, y: 0 };
+      vars['__selectedImg__'] = movKey;
+      // Process child block (move commands)
+      for (const cl of childLines) {
+        const cmd = cl.trim();
+        if (!cmd) continue;
+        const mm = cmd.match(/^move\(([xy]),(-?\d+)\)$/);
+        if (mm) {
+          if (!imgPos[movKey]) imgPos[movKey] = {x:0, y:0};
+          if (mm[1]==='x') imgPos[movKey].x += parseInt(mm[2]);
+          else imgPos[movKey].y += parseInt(mm[2]);
+          span.style.transform = `translate(${imgPos[movKey].x}px,${imgPos[movKey].y}px)`;
+        }
+      }
+      i=nextI; continue;
+    }
+
+    const mMidScan = line.match(/^scan (\w+)$/);
+    if (mMidScan) {
+      const input = await waitForInput();
+      vars[mMidScan[1]] = isNaN(input.trim()) ? input : Number(input);
+      i++; continue;
+    }
+
+    if (line.startsWith('print(') || line.startsWith('printn(')) {
+      if (ignored.has('print')) { i++; continue; }
+      // Determine newline and extract raw inner content
+      let isNl = false;
+      let inner = '';
+      if (line.startsWith('printn(') && line.endsWith(')')) {
+        // printn(CONTENT)
+        isNl = true;
+        inner = line.slice(7, -1);
+      } else if (line.startsWith('print(') && line.endsWith(')n')) {
+        // print(CONTENT)n
+        isNl = true;
+        inner = line.slice(6, -2);
+        // inner still has trailing ) — remove it
+        if (inner.endsWith(')')) inner = inner.slice(0, -1);
+      } else if (line.startsWith('print(') && line.endsWith(')')) {
+        // print(CONTENT)
+        isNl = false;
+        inner = line.slice(6, -1);
+      } else {
+        i++; continue;
+      }
+
+      // print(on"varname") — inline variable print
+      const onVarM = inner.match(/^on"([^"]+)"$/);
+      if (onVarM) {
+        const vname = onVarM[1];
+        if (vname in vars) {
+          printOut(String(vars[vname]), isNl, ps);
+        } else {
+          appendOutput(`[Error] Line ${start + i + 1}: Undefined variable: ${vname}\n`, 'out-error');
+        }
+        i++; continue;
+      }
+
+      // dic key name
+      const dm = inner.match(/^(\w+) key name (.+)$/);
+      if (dm) {
+        const dic = vars[`__dic_${dm[1]}`];
+        const key = dm[2].trim();
+        printOut(dic&&dic[key]!==undefined?String(dic[key]):'[Error] Key not found', isNl, ps);
+        i++; continue;
+      }
+
+      // Asset print: uploaded files
+      if (assets[inner]) {
+        const asset = assets[inner];
+        outputEl.querySelectorAll('.out-system').forEach(n => { if (n.textContent.includes('실행 대기')) n.remove(); });
+        const imgExts = ['png','jpg','jpeg','gif','webp','bmp','svg'];
+        const audioExts = ['mp3','wav','ogg','m4a','flac'];
+        const videoExts = ['mp4','webm','mov','avi'];
+        const textExts = ['js','html','htm','css','txt','py','json','osios','md','xml','csv'];
+        if (imgExts.includes(asset.ext)) {
+          const img = document.createElement('img');
+          img.src = asset.url;
+          if (!imgPos[inner]) imgPos[inner] = { x: 0, y: 0, angle: 0 };
+          const pos = imgPos[inner];
+          const sz = imgPos.__nextImgSize__;
+          const w = sz ? sz.w + 'px' : '400px';
+          const h = sz ? sz.h + 'px' : 'auto';
+          if (sz) imgPos.__nextImgSize__ = null; // 한번 쓰고 초기화
+          img.style.cssText = `display:block;width:${w};height:${h};margin:8px 0;border:1px solid #1e1e2e;transform:translate(${pos.x}px,${pos.y}px) rotate(${pos.angle||0}deg);`;
+          img.dataset.imgname = inner;
+          outputEl.appendChild(img);
+        } else if (audioExts.includes(asset.ext)) {
+          const audio = document.createElement('audio');
+          audio.src = asset.url;
+          audio.controls = true;
+          audio.style.cssText = 'display:block;margin:8px 0;width:100%;';
+          outputEl.appendChild(audio);
+        } else if (videoExts.includes(asset.ext)) {
+          const video = document.createElement('video');
+          video.src = asset.url;
+          video.controls = true;
+          video.style.cssText = 'display:block;max-width:400px;margin:8px 0;border:1px solid #1e1e2e;';
+          outputEl.appendChild(video);
+        } else if (asset.ext === 'html' || asset.ext === 'htm') {
+          const iframe = document.createElement('iframe');
+          iframe.srcdoc = asset.text;
+          iframe.style.cssText = 'display:block;width:400px;height:300px;border:1px solid #1e1e2e;margin:8px 0;';
+          outputEl.appendChild(iframe);
+        } else if (textExts.includes(asset.ext)) {
+          const pre = document.createElement('pre');
+          pre.style.cssText = 'font-family:var(--mono);font-size:12px;color:var(--text);background:rgba(255,255,255,0.03);padding:12px;margin:8px 0;border:1px solid #1e1e2e;overflow-x:auto;max-height:300px;overflow-y:auto;white-space:pre-wrap;';
+          pre.textContent = asset.text;
+          outputEl.appendChild(pre);
+        } else {
+          appendOutput(`[File: ${inner}] (unsupported preview)\n`, 'out-system');
+        }
+        if (isNl) outputEl.appendChild(document.createTextNode('\n'));
+        outputEl.scrollTop = outputEl.scrollHeight;
+        i++; continue;
+      }
+
+      // Image print: print(img.png) or print(imgname)
+      if (images[inner]) {
+        const img = images[inner];
+        outputEl.querySelectorAll('.out-system').forEach(n => { if (n.textContent.includes('실행 대기')) n.remove(); });
+
+        if (img.type === 'html') {
+          // Render HTML image as iframe
+          const iframe = document.createElement('iframe');
+          iframe.style.cssText = 'display:block;width:400px;height:300px;border:1px solid #1e1e2e;margin:8px 0;';
+          iframe.srcdoc = `<!DOCTYPE html><html><head><style>*{margin:0;padding:0;box-sizing:border-box;}body{width:400px;height:300px;overflow:hidden;}</style></head><body>${img.html}</body></html>`;
+          outputEl.appendChild(iframe);
+        } else {
+          // Canvas image — scale up for visibility
+          const { canvas } = img;
+          const scale = Math.max(1, Math.min(32, Math.floor(400 / Math.max(canvas.width, canvas.height))));
+          const displayCanvas = document.createElement('canvas');
+          displayCanvas.width = canvas.width * scale;
+          displayCanvas.height = canvas.height * scale;
+          displayCanvas.style.cssText = 'display:block;margin:8px 0;image-rendering:pixelated;border:1px solid #1e1e2e;';
+          const dctx = displayCanvas.getContext('2d');
+          dctx.imageSmoothingEnabled = false;
+          dctx.drawImage(canvas, 0, 0, displayCanvas.width, displayCanvas.height);
+          outputEl.appendChild(displayCanvas);
+        }
+
+        if (isNl) outputEl.appendChild(document.createTextNode('\n'));
+        outputEl.scrollTop = outputEl.scrollHeight;
+        i++; continue;
+      }
+
+      // String literal: ((text)) — after stripping print( and ), inner = (text)
+      if (inner.startsWith('(') && inner.endsWith(')')) {
+        printOut(inner.slice(1, -1).replace(/\(_\)/g, ' '), isNl, ps);
+        i++; continue;
+      }
+
+      // Function call: print(sum(3,2))
+      const fc = parseFuncCall(inner);
+      if (fc && funcs[fc.name]) {
+        const argVals = fc.args.map(a => evalExpr(a, vars));
+        const ret = await callFunc(fc.name, argVals, vars, ps, ignored, images, imgPos, funcs);
+        printOut(String(ret), isNl, ps);
+        i++; continue;
+      }
+
+      // Variable or expression — must exist in vars
+      const result = evalExprSafe(inner, vars);
+      if (result === '__UNDEFINED__') {
+        appendOutput(`[Error] Line ${start + i + 1}: Undefined variable: ${inner}\n`, 'out-error');
+      } else {
+        printOut(String(result), isNl, ps);
+      }
+      i++; continue;
+    }
+
+    // ── 단독 함수 호출: li((3)), sum(a,b) 등 ──
+    const mStandalone = line.match(/^(\w+)\((.*)\)$/s);
+    if (mStandalone && funcs[mStandalone[1]]) {
+      const argStr = mStandalone[2];
+      const argVals = argStr ? argStr.split(',').map(a => evalExpr(a.trim(), vars)) : [];
+      await callFunc(mStandalone[1], argVals, vars, ps, ignored, images, imgPos, funcs);
+      i++; continue;
+    }
+
+    // Unknown syntax
+    appendOutput(`[Error] Line ${start + i + 1}: Unknown syntax: "${line}"\n`, 'out-error');
+    i++;
+  }
+}
+
+</script>
+</body>
+</html>
