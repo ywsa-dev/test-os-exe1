@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session } = require('electron');
+const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
 function createWindow() {
@@ -7,7 +7,7 @@ function createWindow() {
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    icon: path.join(__dirname, 'src', 'favicon.svg'),
+    icon: path.join(__dirname, 'favicon.svg'),
     title: 'OSLANG Interpreter',
     backgroundColor: '#0a0a0f',
     webPreferences: {
@@ -19,7 +19,7 @@ function createWindow() {
     frame: true,
   });
 
-  win.loadFile(path.join(__dirname, 'src', 'index.html'));
+  win.loadFile(path.join(__dirname, 'index.html'));
 }
 
 app.whenReady().then(() => {
